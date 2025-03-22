@@ -200,25 +200,8 @@ export default function Home() {
                 <span>Identifying plant...</span>
               </div>
             ) : plantInfo ? (
-              <div className="w-full max-w-md bg-white rounded-lg shadow-md p-4">
-                <h2 className="text-xl font-bold mb-2">Plant Identification Results</h2>
-                {plantInfo.result.classification.suggestions.slice(0, 3).map((suggestion, index) => (
-                  <div key={index} className="mb-4">
-                    <p className="font-semibold">
-                      {suggestion.name} ({(suggestion.probability * 100).toFixed(1)}%)
-                    </p>
-                    {suggestion.similar_images && suggestion.similar_images[0] && (
-                      <Image 
-                        src={suggestion.similar_images[0].url} 
-                        alt={`Similar ${suggestion.name}`}
-                        width={80}
-                        height={80}
-                        className="object-cover rounded mt-2"
-                        unoptimized
-                      />
-                    )}
-                  </div>
-                ))}
+              <div className="text-xl font-semibold text-center">
+                {plantInfo.result.classification.suggestions[0].name}
               </div>
             ) : null}
 
