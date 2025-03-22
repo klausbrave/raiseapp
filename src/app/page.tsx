@@ -2,6 +2,7 @@
 
 import { useState, useRef, useEffect } from 'react';
 import { Camera, Circle, Share2, Loader2 } from 'lucide-react';
+import Image from 'next/image';
 
 interface PlantIdentification {
   result: {
@@ -22,7 +23,6 @@ export default function Home() {
   const [plantInfo, setPlantInfo] = useState<PlantIdentification | null>(null);
   const [error, setError] = useState<string | null>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
-  const photoRef = useRef<HTMLImageElement>(null);
 
   // Add your API key here
   const API_KEY = process.env.NEXT_PUBLIC_PLANT_ID_API_KEY;
@@ -83,12 +83,14 @@ export default function Home() {
       // Convert base64 to clean format (remove data:image/jpeg;base64, prefix)
       const base64Image = photoData.replace(/^data:image\/(png|jpeg|jpg);base64,/, '');
 
+      const headers = new Headers({
+        'Content-Type': 'application/json',
+        'Api-Key': API_KEY || '',
+      });
+
       const response = await fetch('https://api.plant.id/v3/identification', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Api-Key': API_KEY,
-        },
+        headers,
         body: JSON.stringify({
           images: [base64Image],
           health: 'auto',
@@ -182,11 +184,13 @@ export default function Home() {
         {photo && (
           <>
             <div className="rounded-lg shadow-lg overflow-hidden">
-              <img 
-                ref={photoRef}
+              <Image 
                 src={photo} 
                 alt="Captured photo" 
-                className="w-[300px] h-[400px] object-cover"
+                width={300}
+                height={400}
+                className="object-cover"
+                unoptimized
               />
             </div>
 
@@ -204,10 +208,13 @@ export default function Home() {
                       {suggestion.name} ({(suggestion.probability * 100).toFixed(1)}%)
                     </p>
                     {suggestion.similar_images && suggestion.similar_images[0] && (
-                      <img 
+                      <Image 
                         src={suggestion.similar_images[0].url} 
                         alt={`Similar ${suggestion.name}`}
-                        className="w-20 h-20 object-cover rounded mt-2"
+                        width={80}
+                        height={80}
+                        className="object-cover rounded mt-2"
+                        unoptimized
                       />
                     )}
                   </div>
