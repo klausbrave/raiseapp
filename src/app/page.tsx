@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useRef, useEffect } from 'react';
-import { Camera, Circle } from 'lucide-react';
+import { Camera, Circle, Download } from 'lucide-react';
 
 export default function Home() {
   const [stream, setStream] = useState<MediaStream | null>(null);
@@ -43,6 +43,17 @@ export default function Home() {
         stream.getTracks().forEach(track => track.stop());
         setStream(null);
       }
+    }
+  };
+
+  const downloadPhoto = () => {
+    if (photo) {
+      const link = document.createElement('a');
+      link.href = photo;
+      link.download = `photo-${new Date().toISOString()}.jpg`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
     }
   };
 
@@ -92,13 +103,22 @@ export default function Home() {
                 className="w-[300px] h-[400px] object-cover"
               />
             </div>
-            <button
-              onClick={openCamera}
-              className="bg-blue-500 hover:bg-blue-600 text-white p-4 rounded-full shadow-md transition-colors"
-              aria-label="Take new photo"
-            >
-              <Camera size={24} />
-            </button>
+            <div className="flex gap-4">
+              <button
+                onClick={downloadPhoto}
+                className="bg-green-500 hover:bg-green-600 text-white p-4 rounded-full shadow-md transition-colors"
+                aria-label="Download photo"
+              >
+                <Download size={24} />
+              </button>
+              <button
+                onClick={openCamera}
+                className="bg-blue-500 hover:bg-blue-600 text-white p-4 rounded-full shadow-md transition-colors"
+                aria-label="Take new photo"
+              >
+                <Camera size={24} />
+              </button>
+            </div>
           </>
         )}
       </div>
