@@ -35,6 +35,26 @@ npm run dev
 
 4. Open [http://localhost:3000](http://localhost:3000) in your browser
 
+## Environment Variables
+
+The following environment variables are required:
+
+```bash
+NEXT_PUBLIC_PLANT_ID_API_KEY=your_api_key_here  # Get from admin.kindwise.com
+```
+
+### Local Development
+
+1. Create a `.env.local` file in the project root
+2. Add the required environment variables
+3. Never commit `.env.local` to version control
+
+### Vercel Deployment
+
+1. Go to your project settings in Vercel
+2. Navigate to the "Environment Variables" section
+3. Add the required environment variables
+
 ## Demo
 [Add your deployed Vercel link here]
 

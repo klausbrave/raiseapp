@@ -1,12 +1,35 @@
 'use client';
 
 import { useState, useRef, useEffect } from 'react';
-import { Camera, Circle, Download } from 'lucide-react';
+import { Camera, Circle, Share2, Loader2 } from 'lucide-react';
+
+interface PlantIdentification {
+  result: {
+    classification: {
+      suggestions: Array<{
+        name: string;
+        probability: number;
+        similar_images?: Array<{ url: string }>;
+      }>;
+    };
+  };
+}
 
 export default function Home() {
   const [stream, setStream] = useState<MediaStream | null>(null);
   const [photo, setPhoto] = useState<string | null>(null);
+  const [isIdentifying, setIsIdentifying] = useState(false);
+  const [plantInfo, setPlantInfo] = useState<PlantIdentification | null>(null);
+  const [error, setError] = useState<string | null>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
+  const photoRef = useRef<HTMLImageElement>(null);
+
+  // Add your API key here
+  const API_KEY = process.env.NEXT_PUBLIC_PLANT_ID_API_KEY;
+
+  if (!API_KEY) {
+    console.error('Missing PLANT_ID_API_KEY environment variable');
+  }
 
   useEffect(() => {
     if (videoRef.current && stream) {
@@ -21,9 +44,12 @@ export default function Home() {
         audio: false,
       });
       setStream(mediaStream);
-      setPhoto(null); // Reset photo when opening camera
+      setPhoto(null);
+      setPlantInfo(null);
+      setError(null);
     } catch (error) {
       console.error('Error accessing camera:', error);
+      setError('Could not access camera');
     }
   };
 
@@ -42,18 +68,71 @@ export default function Home() {
         // Stop the camera stream
         stream.getTracks().forEach(track => track.stop());
         setStream(null);
+
+        // Automatically identify the plant
+        identifyPlant(photoData);
       }
     }
   };
 
-  const downloadPhoto = () => {
+  const identifyPlant = async (photoData: string) => {
+    try {
+      setIsIdentifying(true);
+      setError(null);
+
+      // Convert base64 to clean format (remove data:image/jpeg;base64, prefix)
+      const base64Image = photoData.replace(/^data:image\/(png|jpeg|jpg);base64,/, '');
+
+      const response = await fetch('https://api.plant.id/v3/identification', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Api-Key': API_KEY,
+        },
+        body: JSON.stringify({
+          images: [base64Image],
+          health: 'auto',
+          similar_images: true,
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Plant identification failed');
+      }
+
+      const data: PlantIdentification = await response.json();
+      setPlantInfo(data);
+    } catch (error) {
+      console.error('Error identifying plant:', error);
+      setError('Failed to identify plant');
+    } finally {
+      setIsIdentifying(false);
+    }
+  };
+
+  const sharePhoto = async () => {
     if (photo) {
-      const link = document.createElement('a');
-      link.href = photo;
-      link.download = `photo-${new Date().toISOString()}.jpg`;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
+      try {
+        const response = await fetch(photo);
+        const blob = await response.blob();
+        const file = new File([blob], `photo-${new Date().toISOString()}.jpg`, { type: 'image/jpeg' });
+        
+        if (navigator.share) {
+          await navigator.share({
+            files: [file],
+            title: 'Share Photo',
+          });
+        } else {
+          const link = document.createElement('a');
+          link.href = photo;
+          link.download = file.name;
+          document.body.appendChild(link);
+          link.click();
+          document.body.removeChild(link);
+        }
+      } catch (error) {
+        console.error('Error sharing photo:', error);
+      }
     }
   };
 
@@ -64,6 +143,12 @@ export default function Home() {
       </h1>
 
       <div className="flex flex-col items-center gap-6">
+        {error && (
+          <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded">
+            {error}
+          </div>
+        )}
+
         {!stream && !photo && (
           <button
             onClick={openCamera}
@@ -98,18 +183,45 @@ export default function Home() {
           <>
             <div className="rounded-lg shadow-lg overflow-hidden">
               <img 
+                ref={photoRef}
                 src={photo} 
                 alt="Captured photo" 
                 className="w-[300px] h-[400px] object-cover"
               />
             </div>
+
+            {isIdentifying ? (
+              <div className="flex items-center gap-2 text-blue-600">
+                <Loader2 className="animate-spin" size={24} />
+                <span>Identifying plant...</span>
+              </div>
+            ) : plantInfo ? (
+              <div className="w-full max-w-md bg-white rounded-lg shadow-md p-4">
+                <h2 className="text-xl font-bold mb-2">Plant Identification Results</h2>
+                {plantInfo.result.classification.suggestions.slice(0, 3).map((suggestion, index) => (
+                  <div key={index} className="mb-4">
+                    <p className="font-semibold">
+                      {suggestion.name} ({(suggestion.probability * 100).toFixed(1)}%)
+                    </p>
+                    {suggestion.similar_images && suggestion.similar_images[0] && (
+                      <img 
+                        src={suggestion.similar_images[0].url} 
+                        alt={`Similar ${suggestion.name}`}
+                        className="w-20 h-20 object-cover rounded mt-2"
+                      />
+                    )}
+                  </div>
+                ))}
+              </div>
+            ) : null}
+
             <div className="flex gap-4">
               <button
-                onClick={downloadPhoto}
+                onClick={sharePhoto}
                 className="bg-green-500 hover:bg-green-600 text-white p-4 rounded-full shadow-md transition-colors"
-                aria-label="Download photo"
+                aria-label="Share photo"
               >
-                <Download size={24} />
+                <Share2 size={24} />
               </button>
               <button
                 onClick={openCamera}
